@@ -1,31 +1,44 @@
-#include <string.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
-
-typedef struct s_shape
-{
-	float radius;
-	float x;
-	float y;
-	char type;
-	char color;
-}				t_shape;
 
 typedef struct s_map
 {
-	char *matrice;
 	int width;
 	int height;
+	char *matrice;
 	char color;
-}				t_map;
+}			t_map;
+
+typedef struct s_shape
+{
+	char type;
+	float x;
+	float y;
+	float radius;
+	char color;
+}			t_shape;
+
+int ft_error(char *msg, int code)
+{
+	int i = 0;
+	while (msg[i])
+		i++;
+	write(1, msg, i);
+	return code;
+}
+
+float sq(float x)
+{
+	return x * x;
+}
 
 void display(t_map *map)
 {
 	int i = 0;
-
 	while (i < map->height)
 	{
 		write(1, &map->matrice[i * map->width], map->width);
@@ -34,14 +47,28 @@ void display(t_map *map)
 	}
 }
 
-int ft_error(char *msg, int code)
+void draw_pixel(t_map *map, t_shape *shape, int x, int y)
 {
-	int i = 0;
+	float distance = sqrtf(sq((float)x - shape->x) + sq((float)y - shape->y)) - shape->radius;
 
-	while (msg[i])
-		i++;
-	write(1, msg, i);
-	return code;
+	if (distance > 0.00000000)
+		return ;
+	if ((distance > -1.00000000 && shape->type == 'c') || shape->type == 'C')
+		map->matrice[x + (y * map->width)] = shape->color;
+}
+
+void draw_shape(t_map *map, t_shape *shape)
+{
+	for (int y = 0; y < map->height; y++)
+		for (int x = 0; x < map->width; x++)
+			draw_pixel(map, shape, x, y);
+}
+
+int invalid_shape(t_shape *shape)
+{
+	if (shape->radius <= 0.00000000 || (shape->type != 'c' && shape->type != 'C'))
+		return 1;
+	return 0;
 }
 
 int parse_map(FILE *file, t_map *map)
@@ -56,41 +83,12 @@ int parse_map(FILE *file, t_map *map)
 	return 0;
 }
 
-float sq(float x)
-{
-	return x * x;
-}
-
-void draw_pixel(t_shape *shape, t_map *map, int x, int y)
-{
-	float distance = sqrtf(sq((float)x - shape->x) + sq((float)y - shape->y)) - shape->radius;
-	
-	if (distance > 0.00000000)
-		return ;
-	if ((distance > -1.00000000 && shape->type == 'c') || shape->type == 'C')
-		map->matrice[x + (y * map->width)] = shape->color;
-}
-
-void draw_shape(t_map *map, t_shape *shape)
-{
-	for (int y = 0; y < map->height; y++)
-		for (int x = 0; x < map->width; x++)
-			draw_pixel(shape, map, x, y);
-}
-
-int invalid_shape(t_shape *shape)
-{
-	if (shape->radius <= 0.00000000 || (shape->type != 'C' && shape->type != 'c'))
-		return 1;
-	return 0;
-}
-
 int ft_exec(FILE *file, t_map *map)
 {
+	int ret;
 	t_shape shape;
-	int ret = 5;
 
-	if (parse_map(file, map) == 1)
+	if (parse_map(file, map))
 		return 1;
 	while ((ret = fscanf(file, "%c %f %f %f %c\n", &shape.type, &shape.x, &shape.y, &shape.radius, &shape.color)) == 5)
 	{
